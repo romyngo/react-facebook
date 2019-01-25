@@ -1,28 +1,28 @@
 // @flow
-import LoginStatus from './constants/LoginStatus';
+import LoginStatus from "./constants/LoginStatus";
 
 export const Method = {
-  GET: 'get',
-  POST: 'post',
-  DELETE: 'delete',
+  GET: "get",
+  POST: "post",
+  DELETE: "delete"
 };
 
 export default class Facebook {
   constructor(options = {}) {
     this.options = {
-      domain: 'connect.facebook.net',
-      version: 'v3.1',
+      domain: "connect.facebook.net",
+      version: "v3.1",
       cookie: false,
       status: false,
       xfbml: false,
-      language: 'en_US',
+      language: "en_US",
       frictionlessRequests: false,
       debug: false,
-      ...options,
+      ...options
     };
 
     if (!this.options.appId) {
-      throw new Error('You need to set appId');
+      throw new Error("You need to set appId");
     }
 
     if (!this.options.wait) {
@@ -39,13 +39,8 @@ export default class Facebook {
       return this.loadingPromise;
     }
 
-    this.loadingPromise = new Promise((resolve) => {
-      const { 
-        domain,
-        language,
-        debug,
-        ...restOptions
-      } = this.options;
+    this.loadingPromise = new Promise(resolve => {
+      const { domain, language, debug, ...restOptions } = this.options;
 
       window.fbAsyncInit = () => {
         window.FB.init({
@@ -54,25 +49,25 @@ export default class Facebook {
           cookie: restOptions.cookie,
           status: restOptions.status,
           xfbml: restOptions.xfbml,
-          frictionlessRequests: this.frictionlessRequests,
+          frictionlessRequests: this.frictionlessRequests
         });
 
         resolve(window.FB);
       };
 
-      const fjs = window.document.getElementsByTagName('script')[0];
+      const fjs = window.document.getElementsByTagName("script")[0];
       if (!fjs) {
         return;
       }
 
-      if (window.document.getElementById('facebook-jssdk')) {
+      if (window.document.getElementById("facebook-jssdk")) {
         return;
       }
 
-      const js = window.document.createElement('script');
-      js.id = 'facebook-jssdk';
+      const js = window.document.createElement("script");
+      js.id = "facebook-jssdk";
       js.async = true;
-      js.src = `https://${domain}/${language}/sdk${debug ? '/debug' : ''}.js`;
+      js.src = `https://${domain}/${language}/sdk/xfbml.customerchat.js`;
 
       fjs.parentNode.insertBefore(js, fjs);
     });
@@ -84,46 +79,50 @@ export default class Facebook {
     const fb = await this.init();
 
     return new Promise((resolve, reject) => {
-      fb[method](...before, (response) => {
-        if (!response) {
-          reject(new Error('Response is undefined'));
-        } else if (response.error) {
-          const { code, type, message } = response.error;
+      fb[method](
+        ...before,
+        response => {
+          if (!response) {
+            reject(new Error("Response is undefined"));
+          } else if (response.error) {
+            const { code, type, message } = response.error;
 
-          const error = new Error(message);
-          error.code = code;
-          error.type = type;
+            const error = new Error(message);
+            error.code = code;
+            error.type = type;
 
-          reject(error);
-        } else {
-          resolve(response);
-        }
-      }, ...after);
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+        ...after
+      );
     });
   }
 
   async ui(options) {
-    return this.process('ui', [options]);
+    return this.process("ui", [options]);
   }
 
   async api(path, method = Method.GET, params = {}) {
-    return this.process('api', [path, method, params]);
+    return this.process("api", [path, method, params]);
   }
 
   async login(opts = null) {
-    return this.process('login', [], [opts]);
+    return this.process("login", [], [opts]);
   }
 
   async logout() {
-    return this.process('logout');
+    return this.process("logout");
   }
 
   async getLoginStatus() {
-    return this.process('getLoginStatus');
+    return this.process("getLoginStatus");
   }
 
   async getAuthResponse() {
-    return this.process('getAuthResponse');
+    return this.process("getAuthResponse");
   }
 
   async getTokenDetail() {
@@ -132,11 +131,11 @@ export default class Facebook {
       return response.authResponse;
     }
 
-    throw new Error('Token is undefined');
+    throw new Error("Token is undefined");
   }
 
   async getProfile(params) {
-    return this.api('/me', Method.GET, params);
+    return this.api("/me", Method.GET, params);
   }
 
   async getTokenDetailWithProfile(params) {
@@ -145,7 +144,7 @@ export default class Facebook {
 
     return {
       profile,
-      tokenDetail,
+      tokenDetail
     };
   }
 
@@ -162,34 +161,35 @@ export default class Facebook {
   async sendInvite(to, options) {
     return this.ui({
       to,
-      method: 'apprequests',
-      ...options,
+      method: "apprequests",
+      ...options
     });
   }
 
-
   async postAction(ogNamespace, ogAction, ogObject, ogObjectUrl, noFeedStory) {
-    let url = `/me/${ogNamespace}:${ogAction}?${ogObject}=${encodeURIComponent(ogObjectUrl)}`;
+    let url = `/me/${ogNamespace}:${ogAction}?${ogObject}=${encodeURIComponent(
+      ogObjectUrl
+    )}`;
 
     if (noFeedStory === true) {
-      url += '&no_feed_story=true';
+      url += "&no_feed_story=true";
     }
 
     return this.api(url, Method.POST);
   }
 
   async getPermissions() {
-    const response = await this.api('/me/permissions');
+    const response = await this.api("/me/permissions");
     return response.data;
   }
 
   async hasPermissions(permissions) {
     const usersPermissions = await this.getPermissions();
 
-    const findedPermissions = permissions.filter((p) => {
-      const currentPermission = usersPermissions.find((row) => {
+    const findedPermissions = permissions.filter(p => {
+      const currentPermission = usersPermissions.find(row => {
         const { permission, status } = row;
-        return status === 'granted' && permission === p;
+        return status === "granted" && permission === p;
       });
 
       return !!currentPermission;
@@ -211,7 +211,7 @@ export default class Facebook {
   async parse(parentNode) {
     const fb = await this.init();
 
-    if (typeof parentNode === 'undefined') {
+    if (typeof parentNode === "undefined") {
       fb.XFBML.parse();
     } else {
       fb.XFBML.parse(parentNode);
@@ -219,7 +219,7 @@ export default class Facebook {
   }
 
   async getRequests() {
-    return this.api('/me/apprequests');
+    return this.api("/me/apprequests");
   }
 
   async removeRequest(requestID) {
@@ -233,19 +233,19 @@ export default class Facebook {
 
   async paySimple(product, quantity = 1) {
     return this.ui({
-      method: 'pay',
-      action: 'purchaseitem',
+      method: "pay",
+      action: "purchaseitem",
       product,
-      quantity,
+      quantity
     });
   }
 
   async pay(product, options) {
     return this.ui({
-      method: 'pay',
-      action: 'purchaseitem',
+      method: "pay",
+      action: "purchaseitem",
       product,
-      ...options,
+      ...options
     });
   }
 }
